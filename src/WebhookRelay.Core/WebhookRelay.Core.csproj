@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>WebhookRelay.Core</RootNamespace>
+    <Description>Pure delivery policy: retry schedule with jitter, per-endpoint circuit breaker, attempt classification, egress address policy.</Description>
+  </PropertyGroup>
+
+</Project>

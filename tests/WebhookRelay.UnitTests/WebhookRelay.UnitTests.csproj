@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\WebhookRelay.Signing\WebhookRelay.Signing.csproj" />
+    <ProjectReference Include="..\..\src\WebhookRelay.Core\WebhookRelay.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
