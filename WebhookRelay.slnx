@@ -1,2 +1,8 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WebhookRelay.Signing/WebhookRelay.Signing.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WebhookRelay.UnitTests/WebhookRelay.UnitTests.csproj" />
+  </Folder>
 </Solution>

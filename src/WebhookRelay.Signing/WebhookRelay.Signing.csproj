@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>WebhookRelay.Signing</RootNamespace>
+    <Description>Standard Webhooks (v1, HMAC-SHA256) signing and verification with secret rotation and timestamp tolerance.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WebhookRelay.UnitTests" />
+  </ItemGroup>
+
+</Project>
