@@ -36,9 +36,10 @@ def verify_vectors(path: str) -> int:
 
 
 class State:
-    def __init__(self, secrets, fail_first):
+    def __init__(self, secrets, fail_every):
         self.secrets = secrets
-        self.fail_first = fail_first
+        # Demo fault: the first attempt of every Nth new message gets a 503, so it is retried with the same webhook-id.
+        self.fail_every = fail_every
         self.lock = threading.Lock()
         self.receipts = {}
         # Idempotency: production code stores processed ids durably (unique key, TTL > retry window) in the same
@@ -81,8 +82,9 @@ def make_handler(state: State):
                     status = 401
                 else:
                     state.stats["verified"] += 1
+                    first = webhook_id not in state.receipts
                     state.receipts[webhook_id] = state.receipts.get(webhook_id, 0) + 1
-                    if state.receipts[webhook_id] <= state.fail_first:
+                    if first and state.fail_every > 0 and len(state.receipts) % state.fail_every == 0:
                         state.stats["failedOnPurpose"] += 1
                         status = 503
                     elif webhook_id in state.processed:
@@ -105,7 +107,7 @@ def main() -> int:
     if not secrets:
         print("Set WEBHOOK_SECRETS to one or more whsec_ secrets.", file=sys.stderr)
         return 2
-    state = State(secrets, int(os.environ.get("FAIL_FIRST_ATTEMPTS", "0")))
+    state = State(secrets, int(os.environ.get("FAIL_FIRST_ATTEMPT_EVERY", "0")))
     port = int(os.environ.get("PORT", "8080"))
     print(f"python receiver listening on {port}", flush=True)
     ThreadingHTTPServer(("0.0.0.0", port), make_handler(state)).serve_forever()

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>webhook-relay · replay panel</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <strong>webhook-relay</strong>
+      <span class="muted">replay panel</span>
+    </div>
+    <form id="key-form" autocomplete="off">
+      <label for="admin-key" class="visually-hidden">Admin key</label>
+      <input id="admin-key" type="password" placeholder="X-Admin-Key" required>
+      <button type="submit">Connect</button>
+    </form>
+  </header>
+
+  <main>
+    <p id="status" class="muted" role="status">Enter the admin key to load the queue.</p>
+
+    <section aria-labelledby="counts-title">
+      <h2 id="counts-title" class="visually-hidden">Delivery counts</h2>
+      <div id="counts" class="counts"></div>
+    </section>
+
+    <section aria-labelledby="endpoints-title">
+      <div class="section-head">
+        <h2 id="endpoints-title">Endpoints</h2>
+      </div>
+      <div class="table-wrap">
+        <table id="endpoints">
+          <thead><tr><th>URL</th><th>Circuit</th><th>Failures</th><th>Pending</th><th>Retrying</th><th>Dead</th><th>Delivered</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="deliveries-title">
+      <div class="section-head">
+        <h2 id="deliveries-title">Deliveries</h2>
+        <div class="tabs" role="tablist" id="tabs">
+          <button role="tab" data-status="dead" aria-selected="true">Dead letters</button>
+          <button role="tab" data-status="retrying" aria-selected="false">Retrying</button>
+          <button role="tab" data-status="pending" aria-selected="false">Pending</button>
+          <button role="tab" data-status="delivered" aria-selected="false">Delivered</button>
+          <button role="tab" data-status="" aria-selected="false">All</button>
+        </div>
+        <button id="replay-all" class="danger">Replay all dead</button>
+      </div>
+      <div class="table-wrap">
+        <table id="deliveries">
+          <thead><tr><th>#</th><th>Message</th><th>Event</th><th>Endpoint</th><th>Status</th><th>Attempts</th><th>Last result</th><th>Created</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="muted small">Replay re-queues a delivery with a fresh attempt budget and the <em>same</em> webhook-id, so receivers that
+        already processed it can discard it. Click a row to see every attempt.</p>
+    </section>
+  </main>
+
+  <script src="panel.js"></script>
+</body>
+</html>

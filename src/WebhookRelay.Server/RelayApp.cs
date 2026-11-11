@@ -80,6 +80,21 @@ public static class RelayApp
                     ? Serilog.Events.LogEventLevel.Verbose
                     : Serilog.Events.LogEventLevel.Information);
 
+        // The replay panel renders tenant-controlled strings (URLs, event types), so it gets a strict CSP: scripts and
+        // styles from this origin only, no framing. Scalar's API reference ships inline scripts and is left out.
+        app.Use((context, next) =>
+        {
+            var headers = context.Response.Headers;
+            headers.XContentTypeOptions = "nosniff";
+            headers["Referrer-Policy"] = "no-referrer";
+            if (!context.Request.Path.StartsWithSegments("/scalar"))
+            {
+                headers.ContentSecurityPolicy = "default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
+            }
+
+            return next(context);
+        });
+
         // The replay panel is static HTML + fetch; it holds no secrets and calls the same admin-key-protected API.
         app.UseDefaultFiles();
         app.UseStaticFiles();

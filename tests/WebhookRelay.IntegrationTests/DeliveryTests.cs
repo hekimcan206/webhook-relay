@@ -147,7 +147,10 @@ public sealed class DeliveryTests(DatabaseFixture fixture) : RelayTestBase(fixtu
 
         (await anonymous.GetAsync(new Uri("api/v1/endpoints", UriKind.Relative))).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await wrong.GetAsync(new Uri("api/v1/stats", UriKind.Relative))).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await anonymous.GetAsync(new Uri("health/ready", UriKind.Relative))).StatusCode.Should().Be(HttpStatusCode.OK);
+        var health = await anonymous.GetAsync(new Uri("health/ready", UriKind.Relative));
+        health.StatusCode.Should().Be(HttpStatusCode.OK);
+        health.Headers.GetValues("Content-Security-Policy").Single().Should().Contain("default-src 'self'");
+        health.Headers.GetValues("X-Content-Type-Options").Single().Should().Be("nosniff");
     }
 
     [Fact]

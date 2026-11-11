@@ -1,0 +1,136 @@
+# `docker compose up` runs the whole demo with zero manual steps:
+#   postgres         -> initialised with least-privilege roles (deploy/postgres/init)
+#   migrator         -> relay image, `--migrate-only`, connects as the schema owner, exits
+#   relay            -> API + delivery worker + replay panel (http://127.0.0.1:59480, key: admin-dev-only-key)
+#   receiver-csharp  -> ASP.NET Core receiver, verifies signatures with its own from-scratch verifier
+#   receiver-node    -> node:http receiver, verifies with node:crypto
+#   receiver-python  -> http.server receiver; answers 503 to the first attempt of every third message, so those are
+#                       retried and arrive again with the same webhook-id
+#   demo             -> registers the three endpoints, publishes 60 events, waits for the queue to drain, replays one
+#                       delivery, checks every receiver's counters and exits 0 only if nothing was lost or forged
+# Optional: `docker compose --profile observability up` adds the Aspire dashboard as an OTLP backend.
+name: webhook-relay
+
+x-relay-image: &relay-image
+  image: webhook-relay:local
+  build:
+    context: .
+    dockerfile: Dockerfile
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: relay
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres-dev-only}
+      MIGRATOR_PASSWORD: ${MIGRATOR_PASSWORD:-migrator-dev-only}
+      APP_PASSWORD: ${APP_PASSWORD:-app-dev-only}
+    ports:
+      # Loopback only: lets `dotnet run` (appsettings.Development.json) and psql use this database.
+      - "127.0.0.1:${POSTGRES_PORT:-59432}:5432"
+    volumes:
+      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d relay"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrator:
+    <<: *relay-image
+    command: ["--migrate-only"]
+    environment:
+      ConnectionStrings__Default: Host=postgres;Database=relay;Username=relay_migrator;Password=${MIGRATOR_PASSWORD:-migrator-dev-only}
+      Relay__AdminKey: ${ADMIN_KEY:-admin-dev-only-key}
+      Relay__Delivery__Enabled: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  relay:
+    <<: *relay-image
+    ports:
+      - "127.0.0.1:${RELAY_PORT:-59480}:8080"
+    environment:
+      ConnectionStrings__Default: Host=postgres;Database=relay;Username=relay_app;Password=${APP_PASSWORD:-app-dev-only};Timeout=5
+      Relay__AdminKey: ${ADMIN_KEY:-admin-dev-only-key}
+      # The receivers live on the compose network (private addresses); production keeps this false.
+      Relay__Delivery__AllowPrivateNetworks: "true"
+      Relay__Delivery__RequestTimeout: "00:00:05"
+      Relay__Delivery__LeaseDuration: "00:00:30"
+      Relay__Retry__BaseDelay: "00:00:01"
+      Relay__Retry__Multiplier: "2"
+      OpenApi__Enabled: "true"
+      OTEL_SERVICE_NAME: webhook-relay
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    # No container HEALTHCHECK: the chiseled image has no shell or curl. Probe /health/live and /health/ready over HTTP.
+    restart: unless-stopped
+
+  receiver-csharp:
+    image: webhook-relay-receiver-csharp:local
+    build:
+      context: .
+      dockerfile: samples/receiver-csharp/Dockerfile
+    environment:
+      WEBHOOK_SECRETS: ${SECRET_CSHARP:-whsec_35JyIok6TJ2mxs/vjR3xqk1CY8S7q38e+f8Nf9DaKB0=}
+    restart: unless-stopped
+
+  receiver-node:
+    image: webhook-relay-receiver-node:local
+    build:
+      context: samples/receiver-node
+    environment:
+      WEBHOOK_SECRETS: ${SECRET_NODE:-whsec_f4O2QUWLNQCRQGVl/BqE4pjKGRAY8QbWNVBNB7lojPc=}
+    restart: unless-stopped
+
+  receiver-python:
+    image: webhook-relay-receiver-python:local
+    build:
+      context: samples/receiver-python
+    environment:
+      WEBHOOK_SECRETS: ${SECRET_PYTHON:-whsec_UI1/Djib3kHoa1SKywIzrRBgwSWrkO5GOmQ0yjkzs8w=}
+      FAIL_FIRST_ATTEMPT_EVERY: "3"
+    restart: unless-stopped
+
+  demo:
+    image: node:22-alpine
+    working_dir: /demo
+    command: ["node", "driver.mjs"]
+    volumes:
+      - ./samples/demo:/demo:ro
+    environment:
+      RELAY_URL: http://relay:8080/
+      ADMIN_KEY: ${ADMIN_KEY:-admin-dev-only-key}
+      MESSAGES: "60"
+      SECRET_CSHARP: ${SECRET_CSHARP:-whsec_35JyIok6TJ2mxs/vjR3xqk1CY8S7q38e+f8Nf9DaKB0=}
+      SECRET_NODE: ${SECRET_NODE:-whsec_f4O2QUWLNQCRQGVl/BqE4pjKGRAY8QbWNVBNB7lojPc=}
+      SECRET_PYTHON: ${SECRET_PYTHON:-whsec_UI1/Djib3kHoa1SKywIzrRBgwSWrkO5GOmQ0yjkzs8w=}
+    depends_on:
+      relay:
+        condition: service_started
+      receiver-csharp:
+        condition: service_started
+      receiver-node:
+        condition: service_started
+      receiver-python:
+        condition: service_started
+    restart: "no"
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6
+    profiles: ["observability"]
+    environment:
+      # Local-only convenience; never expose an unsecured dashboard beyond localhost.
+      DASHBOARD__FRONTEND__AUTHMODE: Unsecured
+      DASHBOARD__OTLP__AUTHMODE: Unsecured
+    ports:
+      - "127.0.0.1:59488:18888"
+
+volumes:
+  pgdata:
