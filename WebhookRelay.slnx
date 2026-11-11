@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/WebhookRelay.Core/WebhookRelay.Core.csproj" />
     <Project Path="src/WebhookRelay.Signing/WebhookRelay.Signing.csproj" />
+    <Project Path="src/WebhookRelay.Server/WebhookRelay.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/WebhookRelay.UnitTests/WebhookRelay.UnitTests.csproj" />

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>WebhookRelay.Server</RootNamespace>
+    <!-- The chiseled runtime image ships without ICU; invariant mode keeps behaviour identical locally and in the container. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WebhookRelay.Core\WebhookRelay.Core.csproj" />
+    <ProjectReference Include="..\WebhookRelay.Signing\WebhookRelay.Signing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Persistence\Migrations\*.sql" LogicalName="migrations/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WebhookRelay.UnitTests" />
+    <InternalsVisibleTo Include="WebhookRelay.IntegrationTests" />
+    <InternalsVisibleTo Include="WebhookRelay.Benchmarks" />
+    <InternalsVisibleTo Include="WebhookRelay.TestKit" />
+  </ItemGroup>
+
+</Project>
