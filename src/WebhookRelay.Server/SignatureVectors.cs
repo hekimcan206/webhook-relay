@@ -18,6 +18,7 @@ internal static class SignatureVectors
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
+        NewLine = "\n", // identical bytes on Windows and Linux: the file is a golden artifact
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 

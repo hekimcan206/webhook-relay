@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>ReceiverSample</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Deliberately no reference to WebhookRelay.Signing: the sample shows the spec is implementable from scratch in a
+         few lines, and the CI vector check proves this independent implementation agrees with the relay. -->
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,15 @@
+{
+  "name": "webhook-relay-receiver-node",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standard Webhooks receiver sample (no dependencies: node:http + node:crypto).",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node receiver.mjs",
+    "test": "node --test test/"
+  }
+}

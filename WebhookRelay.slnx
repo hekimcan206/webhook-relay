@@ -4,6 +4,9 @@
     <Project Path="src/WebhookRelay.Signing/WebhookRelay.Signing.csproj" />
     <Project Path="src/WebhookRelay.Server/WebhookRelay.Server.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/receiver-csharp/ReceiverSample.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/WebhookRelay.TestKit/WebhookRelay.TestKit.csproj" />
     <Project Path="tests/WebhookRelay.IntegrationTests/WebhookRelay.IntegrationTests.csproj" />

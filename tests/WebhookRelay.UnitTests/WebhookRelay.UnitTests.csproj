@@ -16,6 +16,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\WebhookRelay.Signing\WebhookRelay.Signing.csproj" />
     <ProjectReference Include="..\..\src\WebhookRelay.Core\WebhookRelay.Core.csproj" />
+    <ProjectReference Include="..\..\src\WebhookRelay.Server\WebhookRelay.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\samples\vectors\signature-vectors.json" Link="vectors\signature-vectors.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
