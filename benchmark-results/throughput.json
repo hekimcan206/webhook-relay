@@ -1,0 +1,50 @@
+{
+  "scenario": "throughput",
+  "payloadBytes": 230,
+  "results": [
+    {
+      "endpoints": 1,
+      "concurrency": 16,
+      "deliveries": 20000,
+      "runsPerSecond": [
+        1026,
+        931,
+        956
+      ],
+      "medianPerSecond": 956
+    },
+    {
+      "endpoints": 1,
+      "concurrency": 64,
+      "deliveries": 20000,
+      "runsPerSecond": [
+        2003,
+        2064,
+        2125
+      ],
+      "medianPerSecond": 2064
+    },
+    {
+      "endpoints": 10,
+      "concurrency": 64,
+      "deliveries": 20000,
+      "runsPerSecond": [
+        1962,
+        2084,
+        1923
+      ],
+      "medianPerSecond": 1962
+    },
+    {
+      "endpoints": 10,
+      "concurrency": 128,
+      "deliveries": 20000,
+      "runsPerSecond": [
+        2335,
+        2456,
+        2475
+      ],
+      "medianPerSecond": 2456
+    }
+  ]
+}

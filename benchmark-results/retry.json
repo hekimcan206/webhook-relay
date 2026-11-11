@@ -1,0 +1,228 @@
+{
+  "scenario": "retry schedule",
+  "defaultPolicy": {
+    "baseDelay": "00:00:10",
+    "multiplier": 3,
+    "maxDelay": "12:00:00",
+    "maxAttempts": 14,
+    "jitter": "Proportional",
+    "jitterFraction": 0.25,
+    "perAttempt": [
+      {
+        "afterFailedAttempt": 1,
+        "nominalSeconds": 10,
+        "minSeconds": 7.5,
+        "p5Seconds": 7.75,
+        "p50Seconds": 10,
+        "p95Seconds": 12.25,
+        "maxSeconds": 12.5
+      },
+      {
+        "afterFailedAttempt": 2,
+        "nominalSeconds": 30,
+        "minSeconds": 22.5,
+        "p5Seconds": 23.23,
+        "p50Seconds": 30,
+        "p95Seconds": 36.74,
+        "maxSeconds": 37.5
+      },
+      {
+        "afterFailedAttempt": 3,
+        "nominalSeconds": 90,
+        "minSeconds": 67.5,
+        "p5Seconds": 69.77,
+        "p50Seconds": 90.03,
+        "p95Seconds": 110.24,
+        "maxSeconds": 112.5
+      },
+      {
+        "afterFailedAttempt": 4,
+        "nominalSeconds": 270,
+        "minSeconds": 202.5,
+        "p5Seconds": 209.19,
+        "p50Seconds": 270.14,
+        "p95Seconds": 330.75,
+        "maxSeconds": 337.5
+      },
+      {
+        "afterFailedAttempt": 5,
+        "nominalSeconds": 810,
+        "minSeconds": 607.5,
+        "p5Seconds": 627.67,
+        "p50Seconds": 809.7,
+        "p95Seconds": 992.37,
+        "maxSeconds": 1012.5
+      },
+      {
+        "afterFailedAttempt": 6,
+        "nominalSeconds": 2430,
+        "minSeconds": 1822.5,
+        "p5Seconds": 1882.74,
+        "p50Seconds": 2428.23,
+        "p95Seconds": 2978.26,
+        "maxSeconds": 3037.5
+      },
+      {
+        "afterFailedAttempt": 7,
+        "nominalSeconds": 7290,
+        "minSeconds": 5467.5,
+        "p5Seconds": 5648.08,
+        "p50Seconds": 7284.44,
+        "p95Seconds": 8928.53,
+        "maxSeconds": 9112.4
+      },
+      {
+        "afterFailedAttempt": 8,
+        "nominalSeconds": 21870,
+        "minSeconds": 16402.7,
+        "p5Seconds": 16951.9,
+        "p50Seconds": 21898.51,
+        "p95Seconds": 26789.24,
+        "maxSeconds": 27337.1
+      },
+      {
+        "afterFailedAttempt": 9,
+        "nominalSeconds": 43200,
+        "minSeconds": 32400.2,
+        "p5Seconds": 33489.62,
+        "p50Seconds": 43200,
+        "p95Seconds": 43200,
+        "maxSeconds": 43200
+      },
+      {
+        "afterFailedAttempt": 10,
+        "nominalSeconds": 43200,
+        "minSeconds": 32400.1,
+        "p5Seconds": 33488.23,
+        "p50Seconds": 43198.19,
+        "p95Seconds": 43200,
+        "maxSeconds": 43200
+      },
+      {
+        "afterFailedAttempt": 11,
+        "nominalSeconds": 43200,
+        "minSeconds": 32400.1,
+        "p5Seconds": 33481.61,
+        "p50Seconds": 43200,
+        "p95Seconds": 43200,
+        "maxSeconds": 43200
+      },
+      {
+        "afterFailedAttempt": 12,
+        "nominalSeconds": 43200,
+        "minSeconds": 32400.3,
+        "p5Seconds": 33483.85,
+        "p50Seconds": 43200,
+        "p95Seconds": 43200,
+        "maxSeconds": 43200
+      },
+      {
+        "afterFailedAttempt": 13,
+        "nominalSeconds": 43200,
+        "minSeconds": 32400.1,
+        "p5Seconds": 33495.44,
+        "p50Seconds": 43200,
+        "p95Seconds": 43200,
+        "maxSeconds": 43200
+      }
+    ],
+    "lastRetryAfterHours": {
+      "p5": 61.19,
+      "p50": 65.47,
+      "p95": 69.02
+    }
+  },
+  "herd": [
+    {
+      "jitter": "None",
+      "peakRetriesInOneSecond": 10000,
+      "distinctSeconds": 1
+    },
+    {
+      "jitter": "Proportional",
+      "peakRetriesInOneSecond": 254,
+      "distinctSeconds": 46
+    },
+    {
+      "jitter": "Full",
+      "peakRetriesInOneSecond": 134,
+      "distinctSeconds": 90
+    }
+  ],
+  "observedScaledSchedule": {
+    "deliveries": 200,
+    "pollIntervalMs": 100,
+    "gaps": [
+      {
+        "afterFailedAttempt": 1,
+        "count": 200,
+        "configuredBandMs": [
+          150,
+          250
+        ],
+        "minMs": 155.1,
+        "p50Ms": 241.14,
+        "p95Ms": 363.91,
+        "maxMs": 578.5,
+        "belowBand": 0,
+        "overshootP95Ms": 113.91
+      },
+      {
+        "afterFailedAttempt": 2,
+        "count": 200,
+        "configuredBandMs": [
+          300,
+          500
+        ],
+        "minMs": 319,
+        "p50Ms": 471.29,
+        "p95Ms": 634.57,
+        "maxMs": 861.3,
+        "belowBand": 0,
+        "overshootP95Ms": 134.57
+      },
+      {
+        "afterFailedAttempt": 3,
+        "count": 200,
+        "configuredBandMs": [
+          600,
+          1000
+        ],
+        "minMs": 624,
+        "p50Ms": 863.13,
+        "p95Ms": 1084.26,
+        "maxMs": 1179,
+        "belowBand": 0,
+        "overshootP95Ms": 84.26
+      },
+      {
+        "afterFailedAttempt": 4,
+        "count": 200,
+        "configuredBandMs": [
+          1200,
+          2000
+        ],
+        "minMs": 1231.4,
+        "p50Ms": 1745.11,
+        "p95Ms": 2049.55,
+        "maxMs": 2216.3,
+        "belowBand": 0,
+        "overshootP95Ms": 49.55
+      },
+      {
+        "afterFailedAttempt": 5,
+        "count": 200,
+        "configuredBandMs": [
+          2400,
+          3200
+        ],
+        "minMs": 2436.8,
+        "p50Ms": 3211.63,
+        "p95Ms": 3309.61,
+        "maxMs": 3361.4,
+        "belowBand": 0,
+        "overshootP95Ms": 109.61
+      }
+    ]
+  }
+}

@@ -309,6 +309,12 @@ internal sealed class RelayStore(NpgsqlDataSource dataSource)
         RetryPolicy retry, CircuitOptions circuitOptions, double random01, CancellationToken ct)
     {
         await using var conn = await dataSource.OpenConnectionAsync(ct);
+        if (outcome.Succeeded && !delivery.IsProbe &&
+            await TryRecordCleanSuccessAsync(conn, delivery, outcome, startedAt, duration, relayId, ct) is { } fast)
+        {
+            return fast;
+        }
+
         await using var tx = await conn.BeginTransactionAsync(ct);
 
         CircuitState? from = null, to = null;
@@ -395,7 +401,52 @@ internal sealed class RelayStore(NpgsqlDataSource dataSource)
     }
 
     /// <summary>
-    /// Fast path for the common case: a success on an endpoint whose breaker is already clean needs no endpoint lock, so
+    /// The hot path, in one statement and one implicit transaction (one round trip, one commit): a success on an
+    /// endpoint whose breaker is clean marks the delivery delivered and appends the attempt. Returns null, having
+    /// changed nothing, when the breaker is not clean; the caller then takes the full transactional path.
+    /// Same fencing as the full path: if the lease was lost, the attempt is logged with lease_lost and the row is untouched.
+    /// </summary>
+    private static async Task<RecordedOutcome?> TryRecordCleanSuccessAsync(
+        NpgsqlConnection conn, ClaimedDelivery delivery, AttemptOutcome outcome, DateTimeOffset startedAt, TimeSpan duration,
+        string relayId, CancellationToken ct)
+    {
+        await using var cmd = new NpgsqlCommand("""
+            WITH clean AS (
+                SELECT circuit_state = 'closed' AND consecutive_failures = 0 AS ok FROM relay.endpoints WHERE id = $2),
+            upd AS (
+                UPDATE relay.deliveries
+                SET status = 'delivered', lease_until = NULL, leased_by = NULL, last_status_code = $5, last_error = NULL,
+                    delivered_at = now(), dead_at = NULL
+                WHERE id = $1 AND status = 'in_flight' AND leased_by = $3 AND attempts = $4 AND (SELECT ok FROM clean)
+                RETURNING 1),
+            ins AS (
+                INSERT INTO relay.attempts (delivery_id, attempt, replay, started_at, duration_ms, status_code, outcome, relay_id, lease_lost)
+                SELECT $1, $4, $6, $7, $8, $5, 'delivered', $3, NOT EXISTS (SELECT 1 FROM upd)
+                WHERE (SELECT ok FROM clean)
+                RETURNING lease_lost)
+            SELECT (SELECT ok FROM clean), (SELECT lease_lost FROM ins)
+            """, conn);
+        cmd.Parameters.Add(P(delivery.Id));
+        cmd.Parameters.Add(P(delivery.EndpointId));
+        cmd.Parameters.Add(P(relayId));
+        cmd.Parameters.Add(P(delivery.Attempt));
+        cmd.Parameters.Add(P(outcome.StatusCode, NpgsqlDbType.Integer));
+        cmd.Parameters.Add(P(delivery.Replay));
+        cmd.Parameters.Add(P(startedAt));
+        cmd.Parameters.Add(P((int)Math.Min(int.MaxValue, duration.TotalMilliseconds)));
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        await reader.ReadAsync(ct);
+        if (reader.IsDBNull(0) || !reader.GetBoolean(0))
+        {
+            return null;
+        }
+
+        var leaseLost = reader.GetBoolean(1);
+        return new RecordedOutcome(leaseLost ? "lease_lost" : "delivered", leaseLost, null, null);
+    }
+
+    /// <summary>
+    /// Inside the full path: a success on an endpoint whose breaker is already clean needs no endpoint lock, so
     /// a single hot endpoint does not serialise all its deliveries on one row. The read is unlocked; a failure racing it
     /// may survive one interleaved success, which only makes the breaker slightly more eager to open.
     /// </summary>
