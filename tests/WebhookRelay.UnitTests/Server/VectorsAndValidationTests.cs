@@ -42,6 +42,8 @@ public sealed class VectorsAndValidationTests
     [InlineData("http://hooks.example.com/in", true, false, "Only https URLs are accepted.")]
     [InlineData("ftp://hooks.example.com/in", false, false, "Only http and https URLs are accepted.")]
     [InlineData("/relative", false, false, "An absolute URL of at most 2048 characters is required.")]
+    [InlineData("relative/path", false, false, "An absolute URL of at most 2048 characters is required.")]
+    [InlineData("file:///etc/passwd", false, false, "Only http and https URLs are accepted.")]
     [InlineData("https://u:p@hooks.example.com/in", false, false, "Credentials in the URL are not accepted; they would be stored and logged in clear text.")]
     [InlineData("http://10.0.0.5/in", false, false, "The URL points at a private, loopback or link-local address.")]
     [InlineData("http://localhost:9000/in", false, false, "The URL points at a private, loopback or link-local address.")]

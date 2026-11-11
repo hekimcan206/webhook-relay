@@ -187,7 +187,10 @@ internal static class RelayApi
     /// <summary>Validates an endpoint URL at registration. The connect-time egress check is the real guard; this gives early, clear errors.</summary>
     internal static string? ValidateUrl(string? url, bool requireHttps, bool allowPrivate)
     {
-        if (string.IsNullOrWhiteSpace(url) || url.Length > 2048 || !Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        // On Linux, Uri.TryCreate("/relative", Absolute) succeeds as an implicit file:///relative URI, so a path would be
+        // reported as a wrong scheme instead of a relative URL. Implicit file URIs (no explicit "file:") count as relative.
+        if (string.IsNullOrWhiteSpace(url) || url.Length > 2048 || !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.IsFile && !url.StartsWith("file:", StringComparison.OrdinalIgnoreCase)))
         {
             return "An absolute URL of at most 2048 characters is required.";
         }
