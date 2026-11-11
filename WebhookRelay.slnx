@@ -12,4 +12,7 @@
     <Project Path="tests/WebhookRelay.IntegrationTests/WebhookRelay.IntegrationTests.csproj" />
     <Project Path="tests/WebhookRelay.UnitTests/WebhookRelay.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/WebhookRelay.Benchmarks/WebhookRelay.Benchmarks.csproj" />
+  </Folder>
 </Solution>

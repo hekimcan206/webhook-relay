@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <!-- BenchmarkDotNet generates code and needs optimised, non-concurrent builds. -->
+    <Optimize>true</Optimize>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\tests\WebhookRelay.TestKit\WebhookRelay.TestKit.csproj" />
+    <ProjectReference Include="..\..\src\WebhookRelay.Signing\WebhookRelay.Signing.csproj" />
+    <ProjectReference Include="..\..\src\WebhookRelay.Core\WebhookRelay.Core.csproj" />
+  </ItemGroup>
+
+</Project>
