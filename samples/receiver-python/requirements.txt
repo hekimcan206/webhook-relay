@@ -1,0 +1,2 @@
+# The receiver sample uses the Python standard library only. CI runs pip-audit on this file so that any
+# dependency added later is audited before it ships.

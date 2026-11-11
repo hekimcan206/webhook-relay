@@ -1,0 +1,195 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  build-test:
+    name: build & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore
+
+      # Package versions are pinned and updated by hand, so a known vulnerability in any direct or
+      # transitive package fails the build. Fix it with a pinned upgrade in Directory.Packages.props.
+      - name: Audit for vulnerable packages
+        run: |
+          set -o pipefail
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee vulnerable-packages.txt
+          if grep -q "has the following vulnerable packages" vulnerable-packages.txt; then
+            echo "::error::Known-vulnerable NuGet packages found (see the list above)"
+            exit 1
+          fi
+
+      - name: Format check
+        run: dotnet format --verify-no-changes --no-restore
+
+      - name: Build (warnings are errors)
+        run: dotnet build --no-restore --configuration Release
+
+      # Unit, property and golden tests, then integration tests: PostgreSQL starts through Testcontainers on the
+      # runner's Docker engine; receivers are real Kestrel servers; the crash test kills the relay process twice.
+      - name: Test
+        run: >
+          dotnet test --no-build --configuration Release
+          --coverage --coverage-output-format cobertura
+          --results-directory "${{ github.workspace }}/TestResults"
+
+      - name: Coverage summary
+        if: always()
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.12
+        with:
+          reports: TestResults/**/*.cobertura.xml
+          targetdir: coverage
+          reporttypes: MarkdownSummaryGithub
+          assemblyfilters: "-*Tests*;-WebhookRelay.TestKit;-WebhookRelay.Benchmarks;-ReceiverSample"
+          filefilters: "-*/obj/*"
+
+      - name: Publish coverage to job summary
+        if: always()
+        run: |
+          if [ -f coverage/SummaryGithub.md ]; then
+            cat coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No coverage report produced."
+          fi
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: test-results
+          path: TestResults/
+          retention-days: 7
+
+  # The cross-language contract: the relay generates signature vectors in this job, they must equal the committed
+  # copy, and the C#, Node and Python receivers must accept every valid vector and reject every invalid one.
+  receiver-samples:
+    name: receiver samples (C#, Node, Python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22.23.4"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Generate vectors with the relay
+        run: |
+          dotnet run --project src/WebhookRelay.Server --configuration Release -- --emit-vectors "$RUNNER_TEMP/relay-vectors.json"
+          diff -u samples/vectors/signature-vectors.json "$RUNNER_TEMP/relay-vectors.json"
+
+      - name: C# receiver
+        run: dotnet run --project samples/receiver-csharp --configuration Release -- verify-vectors "$RUNNER_TEMP/relay-vectors.json"
+
+      - name: Node receiver
+        working-directory: samples/receiver-node
+        env:
+          VECTORS: ${{ runner.temp }}/relay-vectors.json
+        run: |
+          npm audit --audit-level=low
+          npm test
+          node receiver.mjs verify-vectors "$VECTORS"
+
+      - name: Python receiver
+        working-directory: samples/receiver-python
+        env:
+          VECTORS: ${{ runner.temp }}/relay-vectors.json
+        run: |
+          python -m pip install --disable-pip-version-check --quiet pip-audit==2.9.0
+          # The sample has no third-party dependencies; auditing its requirement file keeps it that way.
+          pip-audit --requirement requirements.txt --progress-spinner off
+          python -m unittest -v test_standard_webhooks
+          python receiver.py verify-vectors "$VECTORS"
+
+  container:
+    name: container image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build relay image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: webhook-relay:ci
+          cache-from: type=gha,scope=relay
+          cache-to: type=gha,mode=max,scope=relay
+
+      - name: Verify the image runs as non-root
+        run: |
+          user=$(docker image inspect webhook-relay:ci --format '{{.Config.User}}')
+          echo "user: ${user}"
+          test -n "${user}" && test "${user}" != "0" && test "${user}" != "root"
+
+  compose-demo:
+    name: docker compose demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      # The README promises `docker compose up` runs the whole demo with zero manual steps; this job keeps it true.
+      - name: Start the stack
+        run: docker compose up -d --build
+
+      - name: Every receiver verifies and processes every message; the replay is detected as a duplicate
+        run: |
+          code=$(docker wait webhook-relay-demo-1)
+          docker compose logs --no-log-prefix demo | tee demo.log
+          test "${code}" = "0"
+          grep -q '"ok":true' demo.log
+          grep -q '"failures":\[\]' demo.log
+
+      - name: The replay panel and API are served
+        run: |
+          curl -fsS http://127.0.0.1:59480/ | grep -q "replay panel"
+          curl -fsS -H "X-Admin-Key: admin-dev-only-key" http://127.0.0.1:59480/api/v1/stats | tee stats.json
+          grep -q '"dead":0' stats.json
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:59480/api/v1/stats)" = "401"
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs
