@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <Description>Fault-injecting webhook receiver, PostgreSQL environment and in-process relay host, shared by the integration tests and the benchmark harness.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\WebhookRelay.Signing\WebhookRelay.Signing.csproj" />
+    <ProjectReference Include="..\..\src\WebhookRelay.Server\WebhookRelay.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The exact init script docker compose uses, so the least-privilege setup is tested, not assumed. -->
+    <None Include="..\..\deploy\postgres\init\*.sh" Link="postgres-init\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
